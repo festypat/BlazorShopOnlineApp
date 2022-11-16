@@ -22,7 +22,7 @@ namespace ShopOnline.API.Repositories
         public async Task<CartItem> AddItem(CartItemToAddDto cartItemToAddDto)
         {
 
-            if (await CartItemExists(cartItemToAddDto.CartId, cartItemToAddDto.ProductId))
+            if (!await CartItemExists(cartItemToAddDto.CartId, cartItemToAddDto.ProductId))
             {
                 var item = await (from product in _context.Products
                                   where product.Id == cartItemToAddDto.ProductId
@@ -44,24 +44,35 @@ namespace ShopOnline.API.Repositories
             return null;
         }
 
-        public Task<CartItem> DeleteItem(int id)
+        public async Task<CartItem> DeleteItem(int id)
         {
-            throw new NotImplementedException();
+            var item = await _context.CartItems.FindAsync(id);
+            if (item != default)
+            {
+                _context.CartItems.Remove(item);
+                await _context.SaveChangesAsync();
+            }
+            return item;
         }
 
         public async Task<CartItem> GetItem(int id)
         {
-            return await(from cart in _context.Carts
-                         join cartItem in _context.CartItems
-                         on cart.Id equals cartItem.CartId
-                         where cartItem.Id == id
-                         select new CartItem
-                         {
-                             Id = cartItem.Id,
-                             ProductId = cartItem.ProductId,
-                             Qty = cartItem.Qty,
-                             CartId = cartItem.CartId
-                         }).SingleOrDefaultAsync();
+            var query = await (from cart in _context.Carts
+                               join cartItem in _context.CartItems
+                               on cart.Id equals cartItem.CartId
+                               where cartItem.Id == id
+                               select new CartItem
+                               {
+                                   Id = cartItem.Id,
+                                   ProductId = cartItem.ProductId,
+                                   Qty = cartItem.Qty,
+                                   CartId = cartItem.CartId
+                               }).SingleOrDefaultAsync();
+
+            if (query != default)
+                return query;
+
+            return null;
         }
 
         public async Task<IEnumerable<CartItem>> GetItems(int userId)
